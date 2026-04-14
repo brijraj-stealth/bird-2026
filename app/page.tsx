@@ -240,7 +240,6 @@ export default function Home() {
               muted
               playsInline
               preload="auto"
-              // @ts-expect-error — webkit-specific attribute for older iOS Safari
               webkit-playsinline="true"
             />
           </div>
