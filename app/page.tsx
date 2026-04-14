@@ -57,52 +57,81 @@ export default function Home() {
     const wrap  = heroWrapRef.current;
     if (!video || !wrap) return;
 
-    video.pause();
+    // iOS Safari ignores preload="auto" and won't load video data without a
+    // play() call or explicit load(). Kick off loading immediately, then on
+    // mobile Safari briefly play+pause to unlock seekability.
+    video.load();
 
-    // RAF lerp loop: decouples seeks from scroll events, bridges decode latency
+    const unlockAndStart = () => {
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      if (isIOS) {
+        // play() briefly to unblock seeking, then pause at frame 0
+        const p = video.play();
+        if (p !== undefined) {
+          p.then(() => { video.pause(); video.currentTime = 0; }).catch(() => {});
+        }
+      } else {
+        video.pause();
+      }
+
+      startScrub();
+    };
+
     let currentTime = 0;
     let rafId: number;
+    let triggerInstance: ReturnType<typeof ScrollTrigger.create> | null = null;
 
-    const tick = () => {
-      currentTime += (targetTime.current - currentTime) * 0.1;
-      if (Math.abs(currentTime - video.currentTime) > 0.01) {
-        video.currentTime = currentTime;
-      }
+    const startScrub = () => {
+      // RAF lerp loop: decouples seeks from scroll events, bridges decode latency
+      const tick = () => {
+        currentTime += (targetTime.current - currentTime) * 0.1;
+        if (Math.abs(currentTime - video.currentTime) > 0.01) {
+          video.currentTime = currentTime;
+        }
+        rafId = requestAnimationFrame(tick);
+      };
       rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
 
-    // ScrollTrigger tracks the outer 300vh wrapper.
-    // start/end: top→bottom of wrapper against viewport top = 200vh of scroll.
-    const trigger = ScrollTrigger.create({
-      trigger: wrap,
-      start: "top top",
-      end: "bottom bottom",
-      scrub: true,
-      onUpdate: (self) => {
-        // Video time: map full scroll range to full video duration
-        if (video.duration) {
-          targetTime.current = self.progress * video.duration;
-        }
-
-        const isDesktop = window.innerWidth >= 768;
-
-        // Desktop only: slide video up from 50vh → 0 at 60%+ scroll
-        if (isDesktop && videoWrapRef.current) {
-          if (self.progress >= 0.6) {
-            const moveProgress = (self.progress - 0.6) / 0.4;
-            videoWrapRef.current.style.translate = `0 ${50 * (1 - moveProgress)}vh`;
-          } else {
-            videoWrapRef.current.style.translate = ""; // let Tailwind class take over
+      // ScrollTrigger tracks the outer 300vh wrapper.
+      triggerInstance = ScrollTrigger.create({
+        trigger: wrap,
+        start: "top top",
+        end: "bottom bottom",
+        scrub: true,
+        onUpdate: (self) => {
+          // Video time: map full scroll range to full video duration
+          if (video.duration && isFinite(video.duration)) {
+            targetTime.current = self.progress * video.duration;
           }
-        }
 
-      },
-    });
+          const isDesktop = window.innerWidth >= 768;
+
+          // Desktop only: slide video up from 50vh → 0 at 60%+ scroll
+          if (isDesktop && videoWrapRef.current) {
+            if (self.progress >= 0.6) {
+              const moveProgress = (self.progress - 0.6) / 0.4;
+              videoWrapRef.current.style.translate = `0 ${50 * (1 - moveProgress)}vh`;
+            } else {
+              videoWrapRef.current.style.translate = "";
+            }
+          }
+        },
+      });
+    };
+
+    // Wait for metadata so duration is available before scrubbing begins
+    if (video.readyState >= 1) {
+      unlockAndStart();
+    } else {
+      video.addEventListener("loadedmetadata", unlockAndStart, { once: true });
+    }
 
     return () => {
       cancelAnimationFrame(rafId);
-      trigger.kill();
+      triggerInstance?.kill();
+      video.removeEventListener("loadedmetadata", unlockAndStart);
     };
   }, []);
 
@@ -189,7 +218,7 @@ export default function Home() {
           {/* Scroll-scrubbed video */}
           <div
             ref={videoWrapRef}
-            className="max-md:scale-[2] md:translate-y-[50vh]"
+            className="max-md:scale-[3] md:translate-y-[50vh]"
             style={{
               position: "absolute",
               inset: 0,
@@ -211,6 +240,8 @@ export default function Home() {
               muted
               playsInline
               preload="auto"
+              // @ts-expect-error — webkit-specific attribute for older iOS Safari
+              webkit-playsinline="true"
             />
           </div>
         </div>
