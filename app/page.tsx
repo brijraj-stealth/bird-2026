@@ -17,8 +17,6 @@ export default function Home() {
   const videoWrapRef = useRef<HTMLDivElement>(null);
   const videoRef     = useRef<HTMLVideoElement>(null);
   const heroWrapRef  = useRef<HTMLDivElement>(null);
-  const sectionRef   = useRef<HTMLElement>(null);
-  const contentRef   = useRef<HTMLDivElement>(null);
   // targetTime is written by ScrollTrigger onUpdate; lerp'd by the RAF loop
   const targetTime   = useRef(0);
 
@@ -99,24 +97,6 @@ export default function Home() {
           }
         }
 
-        // At 60% scroll: bg shifts to black and content fades out
-        if (self.progress >= 0.6) {
-          const moveProgress = (self.progress - 0.6) / 0.4;
-          if (sectionRef.current) {
-            sectionRef.current.style.background =
-              `linear-gradient(rgba(0,0,0,${moveProgress}),rgba(0,0,0,${moveProgress})),${GRADIENT_BG}`;
-          }
-          if (contentRef.current) {
-            contentRef.current.style.opacity = String(1 - moveProgress);
-          }
-        } else {
-          if (sectionRef.current) {
-            sectionRef.current.style.background = GRADIENT_BG;
-          }
-          if (contentRef.current) {
-            contentRef.current.style.opacity = "1";
-          }
-        }
       },
     });
 
@@ -130,7 +110,6 @@ export default function Home() {
     <main>  
       <div ref={heroWrapRef} style={{ height: "300vh" }}>
       <section
-        ref={sectionRef}
         style={{
           background: GRADIENT_BG,
           fontFamily: "var(--font-sf-pro)",
@@ -141,7 +120,7 @@ export default function Home() {
         }}
         className="flex flex-col items-center justify-top pt-24 pb-8 md:py-30"
       >
-        <div ref={contentRef} className="flex flex-col items-center text-center px-4 md:px-0">
+        <div className="flex flex-col items-center text-center px-4 md:px-0">
           {/* Logo */}
           <svg
             ref={logoRef}
