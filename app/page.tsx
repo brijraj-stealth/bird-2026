@@ -5,8 +5,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import heroBase from "@/public/home/hero/arc.png";
 import pathDownwards from "@/public/home/hero/path-downwards.png";
+import { ShaderBackground } from "@/app/components/ShaderBackground";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -43,7 +43,6 @@ export default function Home() {
   const line1 = useRef<HTMLSpanElement>(null);
   const line2 = useRef<HTMLSpanElement>(null);
   const subtextRef = useRef<HTMLParagraphElement>(null);
-  const baseImgRef = useRef<HTMLDivElement>(null);
   const videoWrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const heroWrapRef = useRef<HTMLDivElement>(null);
@@ -88,14 +87,12 @@ export default function Home() {
     };
   }, []);
 
-  const GRADIENT_BG = "linear-gradient(180deg, #EAE1FF 0%, #ffffff 50%, #ffffff 100%)";
 
   useLayoutEffect(() => {
     gsap.set(logoRef.current, { opacity: 0, y: 28 });
     gsap.set(line1.current, { y: "105%" });
     gsap.set(line2.current, { y: "105%" });
     gsap.set(subtextRef.current, { opacity: 0, y: 22 });
-    gsap.set(baseImgRef.current, { opacity: 0 });
     gsap.set(videoWrapRef.current, { opacity: 0 });
   }, []);
 
@@ -110,7 +107,6 @@ export default function Home() {
         .to(line1.current, { y: "0%", duration: 1.0 }, 0.04)
         .to(line2.current, { y: "0%", duration: 1.0 }, 0.18)
         .to(subtextRef.current, { opacity: 1, y: 0, duration: 0.8 }, 0.38)
-        .to(baseImgRef.current, { opacity: 1, duration: 1.1, ease: "power3.out" }, 0.05)
         .to(videoWrapRef.current, { opacity: 1, duration: 0.95, ease: "power4.out" }, 0.28);
     };
 
@@ -363,7 +359,7 @@ export default function Home() {
       <div ref={heroWrapRef} style={{ height: "300vh" }}>
         <section
           style={{
-            background: GRADIENT_BG,
+            background: "#ffffff",
             fontFamily: "var(--font-sf-pro)",
             height: "100vh",
             position: "sticky",
@@ -372,7 +368,10 @@ export default function Home() {
           }}
           className="flex flex-col items-center justify-top pt-24 pb-8 md:py-30"
         >
-          <div className="flex flex-col items-center text-center px-4 md:px-0">
+          {/* Animated WebGL shader — replaces static arc + gradient */}
+          <ShaderBackground />
+
+          <div className="flex flex-col items-center text-center px-4 md:px-0" style={{ position: "relative", zIndex: 1 }}>
             {/* Logo */}
             <svg
               ref={logoRef}
@@ -437,21 +436,8 @@ export default function Home() {
             }}
           />
 
-          {/* Hero image stack */}
+          {/* Scroll-scrubbed video */}
           <div style={{ position: "absolute", bottom: 0, width: "100%", mixBlendMode: "darken" }}>
-            {/* Base arc image */}
-            <div ref={baseImgRef} className="max-md:translate-y-0 md:translate-y-[70vh]" style={{ zIndex: 3 }}>
-              <Image
-                src={heroBase}
-                alt=""
-                sizes="100vw"
-                style={{ width: "100%", height: "auto", objectFit: "contain" }}
-                placeholder="blur"
-                priority
-              />
-            </div>
-
-            {/* Scroll-scrubbed video */}
             <div
               ref={videoWrapRef}
               className="max-md:scale-[3] md:translate-y-[50vh]"
